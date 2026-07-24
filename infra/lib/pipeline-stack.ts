@@ -154,12 +154,14 @@ export class PipelineStack extends cdk.Stack {
     })
 
     // Anthropic API key — this Lambda calls Anthropic directly, not Bedrock
-    // (see project memory "decision_llm_provider"). Placeholder secret value;
-    // set the real key post-deploy (never via CLI — see deploy notes).
-    const anthropicApiKeySecret = new secretsmanager.Secret(this, "AnthropicApiKey", {
-      secretName: `ottosurgical-${props.envName}-anthropic-api-key`,
-      description: "Anthropic API key for GenerateNote — set the real value post-deploy",
-    })
+    // (see project memory "decision_llm_provider"). Reuses the existing
+    // beacon/anthropic_api_key secret (plaintext string value) rather than
+    // provisioning a new one.
+    const anthropicApiKeySecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      "AnthropicApiKey",
+      "beacon/anthropic_api_key",
+    )
 
     const generateNote = new NodejsFunction(this, "GenerateNote", {
       entry: path.join(lambdaDir, "pipeline", "generateNote.ts"),

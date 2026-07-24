@@ -85,6 +85,10 @@ web-build/
 # Configurations
 !env.js
 
+# Local env vars (CDK stack outputs — not secret, but deployment-specific)
+.env
+.env.local
+
 /coverage
 
 # Dependency Graph Visualizations

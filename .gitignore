@@ -90,3 +90,10 @@ web-build/
 # Dependency Graph Visualizations
 app-dependency-graph.svg
 app-dependency-graph.png
+
+# CDK (infra/)
+infra/node_modules/
+infra/cdk.out/
+infra/**/*.d.ts
+infra/**/*.js
+infra/.cdk.staging/

@@ -1,0 +1,24 @@
+{
+  "name": "otto-surgical-infra",
+  "version": "0.1.0",
+  "private": true,
+  "bin": {
+    "otto-surgical": "bin/otto-surgical.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "aws-cdk": "^2.1129.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.9.2"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.170.0",
+    "constructs": "^10.4.2",
+    "source-map-support": "^0.5.21"
+  }
+}

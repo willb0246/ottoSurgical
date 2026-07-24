@@ -7,13 +7,13 @@ import { Pressable, TextStyle, View, ViewStyle } from "react-native"
 
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
-import type { HomeStackScreenProps } from "@/navigators/navigationTypes"
+import type { AppStackScreenProps } from "@/navigators/navigationTypes"
 import { useAppTheme } from "@/theme/context"
 import { makeId, PROCEDURES } from "@/utils/scribe/procedures"
 import { createSession } from "@/utils/scribe/sessionStore"
 import type { ProcedureType } from "@/types/scribe"
 
-interface ScribeProcedureSelectScreenProps extends HomeStackScreenProps<"ScribeProcedureSelect"> {}
+interface ScribeProcedureSelectScreenProps extends AppStackScreenProps<"ScribeProcedureSelect"> {}
 
 export const ScribeProcedureSelectScreen: FC<ScribeProcedureSelectScreenProps> =
   function ScribeProcedureSelectScreen({ navigation }) {

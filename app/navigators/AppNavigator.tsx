@@ -11,10 +11,15 @@ import Config from "@/config"
 import { useAuth } from "@/context/AuthContext"
 import { ErrorBoundary } from "@/screens/ErrorScreen/ErrorBoundary"
 import { LoginScreen } from "@/screens/LoginScreen"
-import { WelcomeScreen } from "@/screens/WelcomeScreen"
+import {
+  ScribeCaptureScreen,
+  ScribeExportScreen,
+  ScribeProcedureSelectScreen,
+  ScribeQueueScreen,
+  ScribeReviewScreen,
+} from "@/screens/scribe"
 import { useAppTheme } from "@/theme/context"
 
-import { DemoNavigator } from "./DemoNavigator"
 import type { AppStackParamList, NavigationProps } from "./navigationTypes"
 import { navigationRef, useBackButtonHandler } from "./navigationUtilities"
 
@@ -43,22 +48,21 @@ const AppStack = () => {
           backgroundColor: colors.background,
         },
       }}
-      initialRouteName={isAuthenticated ? "Welcome" : "Login"}
+      initialRouteName={isAuthenticated ? "ScribeQueue" : "Login"}
     >
       {isAuthenticated ? (
         <>
-          <Stack.Screen name="Welcome" component={WelcomeScreen} />
-
-          <Stack.Screen name="Demo" component={DemoNavigator} />
+          <Stack.Screen name="ScribeQueue" component={ScribeQueueScreen} />
+          <Stack.Screen name="ScribeProcedureSelect" component={ScribeProcedureSelectScreen} />
+          <Stack.Screen name="ScribeCapture" component={ScribeCaptureScreen} />
+          <Stack.Screen name="ScribeReview" component={ScribeReviewScreen} />
+          <Stack.Screen name="ScribeExport" component={ScribeExportScreen} />
         </>
       ) : (
         <>
           <Stack.Screen name="Login" component={LoginScreen} />
         </>
       )}
-
-      {/** 🔥 Your screens go here */}
-      {/* IGNITE_GENERATOR_ANCHOR_APP_STACK_SCREENS */}
     </Stack.Navigator>
   )
 }

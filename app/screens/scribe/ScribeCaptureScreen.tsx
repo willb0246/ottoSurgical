@@ -14,11 +14,11 @@ import { Button } from "@/components/Button"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
 import { useScribeAudio } from "@/hooks/useScribeAudio"
-import type { HomeStackScreenProps } from "@/navigators/navigationTypes"
+import type { AppStackScreenProps } from "@/navigators/navigationTypes"
 import { useAppTheme } from "@/theme/context"
 import { addSegment, updateSession } from "@/utils/scribe/sessionStore"
 
-interface ScribeCaptureScreenProps extends HomeStackScreenProps<"ScribeCapture"> {}
+interface ScribeCaptureScreenProps extends AppStackScreenProps<"ScribeCapture"> {}
 
 // "Beacon" is an uncommon word the recognizer easily mishears, so we accept
 // close variants too. contextualStrings (native side) biases toward these.

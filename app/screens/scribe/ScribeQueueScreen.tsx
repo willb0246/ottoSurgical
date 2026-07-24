@@ -10,11 +10,11 @@ import { useFocusEffect } from "@react-navigation/native"
 import { Button } from "@/components/Button"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
-import type { HomeStackScreenProps } from "@/navigators/navigationTypes"
+import type { AppStackScreenProps } from "@/navigators/navigationTypes"
 import { useAppTheme } from "@/theme/context"
 import { listSessions, type StoredSession } from "@/utils/scribe/sessionStore"
 
-interface ScribeQueueScreenProps extends HomeStackScreenProps<"ScribeQueue"> {}
+interface ScribeQueueScreenProps extends AppStackScreenProps<"ScribeQueue"> {}
 
 function segmentSummary(s: StoredSession): string {
   const n = s.segments.length

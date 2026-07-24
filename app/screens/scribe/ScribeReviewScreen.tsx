@@ -13,12 +13,12 @@ import { useFocusEffect } from "@react-navigation/native"
 import { Button } from "@/components/Button"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
-import type { HomeStackScreenProps } from "@/navigators/navigationTypes"
+import type { AppStackScreenProps } from "@/navigators/navigationTypes"
 import { useAppTheme } from "@/theme/context"
 import { getSession, type StoredSession } from "@/utils/scribe/sessionStore"
 import { SAFETY_LABEL } from "@/types/scribe"
 
-interface ScribeReviewScreenProps extends HomeStackScreenProps<"ScribeReview"> {}
+interface ScribeReviewScreenProps extends AppStackScreenProps<"ScribeReview"> {}
 
 export const ScribeReviewScreen: FC<ScribeReviewScreenProps> = function ScribeReviewScreen({
   navigation,

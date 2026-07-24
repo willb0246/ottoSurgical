@@ -11,11 +11,11 @@ import { TextStyle, View, ViewStyle } from "react-native"
 import { Button } from "@/components/Button"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
-import type { HomeStackScreenProps } from "@/navigators/navigationTypes"
+import type { AppStackScreenProps } from "@/navigators/navigationTypes"
 import { useAppTheme } from "@/theme/context"
 import { SAFETY_LABEL } from "@/types/scribe"
 
-interface ScribeExportScreenProps extends HomeStackScreenProps<"ScribeExport"> {}
+interface ScribeExportScreenProps extends AppStackScreenProps<"ScribeExport"> {}
 
 export const ScribeExportScreen: FC<ScribeExportScreenProps> = function ScribeExportScreen({
   navigation,

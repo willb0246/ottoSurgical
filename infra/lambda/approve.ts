@@ -64,8 +64,8 @@ export async function handler(
       new UpdateCommand({
         TableName: TABLE_NAME,
         Key: { PK, SK: keys.draft() },
-        UpdateExpression: "SET #status = :status, fields = :fields",
-        ExpressionAttributeNames: { "#status": "status" },
+        UpdateExpression: "SET #status = :status, #fields = :fields",
+        ExpressionAttributeNames: { "#status": "status", "#fields": "fields" },
         ExpressionAttributeValues: { ":status": "final", ":fields": finalFields },
       }),
     )

@@ -13,8 +13,10 @@ import { Pressable, ScrollView, TextStyle, View, ViewStyle } from "react-native"
 import { Button } from "@/components/Button"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
+import { useAuth } from "@/context/AuthContext"
 import { useScribeAudio } from "@/hooks/useScribeAudio"
 import type { AppStackScreenProps } from "@/navigators/navigationTypes"
+import { getUploadUrl, ingestSegment } from "@/services/api/scribeApi"
 import { useAppTheme } from "@/theme/context"
 import { addSegment, updateSession } from "@/utils/scribe/sessionStore"
 
@@ -40,11 +42,17 @@ export const ScribeCaptureScreen: FC<ScribeCaptureScreenProps> = function Scribe
   route,
 }) {
   const { theme } = useAppTheme()
-  const { sessionId } = route.params
+  const { sessionId, procedureType } = route.params
+  const { surgeonId } = useAuth()
   const audio = useScribeAudio()
   const startedRef = useRef(false)
+  // Last successfully-ingested segment — resent with endOfCase:true to
+  // trigger the pipeline, since the wire contract has no separate
+  // "just end the case" call (PRD §3.4).
+  const lastIngestedRef = useRef<{ segmentId: string; audioKey: string } | null>(null)
 
-  // Persist each recorded utterance to the session as it lands.
+  // Persist each recorded utterance to the session as it lands, then upload
+  // + ingest it against the real backend (PRD §5 step 4).
   audio.onSegment((seg) => {
     addSegment(sessionId, {
       segmentId: seg.segmentId,
@@ -54,6 +62,33 @@ export const ScribeCaptureScreen: FC<ScribeCaptureScreenProps> = function Scribe
       startedAt: seg.startedAt,
       endReason: seg.endReason,
     })
+
+    if (!surgeonId) return
+    ;(async () => {
+      try {
+        const { uploadUrl, audioKey } = await getUploadUrl(sessionId, seg.segmentId)
+        const audioBlob = await (await fetch(seg.uri)).blob()
+        await fetch(uploadUrl, {
+          method: "PUT",
+          body: audioBlob,
+          headers: { "Content-Type": "audio/wav" },
+        })
+        await ingestSegment({
+          sessionId,
+          surgeonId,
+          procedureType,
+          segmentId: seg.segmentId,
+          audioKey,
+          endOfCase: false,
+        })
+        lastIngestedRef.current = { segmentId: seg.segmentId, audioKey }
+      } catch (err) {
+        // The local sessionStore copy above already has this segment; the
+        // client's local-queue retry story (PRD §7) covers re-sending
+        // failed ingests, not yet built here — surfacing for now.
+        console.warn("Segment upload/ingest failed", err)
+      }
+    })()
   })
 
   // Request permission and start the session once, on mount.
@@ -84,6 +119,21 @@ export const ScribeCaptureScreen: FC<ScribeCaptureScreenProps> = function Scribe
   async function endCase() {
     await audio.stop()
     updateSession(sessionId, { endedAt: new Date().toISOString() })
+
+    if (surgeonId && lastIngestedRef.current) {
+      try {
+        await ingestSegment({
+          sessionId,
+          surgeonId,
+          procedureType,
+          ...lastIngestedRef.current,
+          endOfCase: true,
+        })
+      } catch (err) {
+        console.warn("Failed to signal end-of-case to backend", err)
+      }
+    }
+
     navigation.replace("ScribeReview", { sessionId })
   }
 

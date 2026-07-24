@@ -27,10 +27,25 @@ const tags = {
 
 const stackProps = { env, tags }
 
-new AuthStack(app, `ottosurgical-${envName}-auth`, { ...stackProps, envName })
-new DataStack(app, `ottosurgical-${envName}-data`, { ...stackProps, envName })
+const authStack = new AuthStack(app, `ottosurgical-${envName}-auth`, { ...stackProps, envName })
+const dataStack = new DataStack(app, `ottosurgical-${envName}-data`, { ...stackProps, envName })
 
-// Empty for now — filled in as the build sequence reaches them (PRD §5 steps 4/5/8).
-new ApiStack(app, `ottosurgical-${envName}-api`, { ...stackProps, envName })
-new PipelineStack(app, `ottosurgical-${envName}-pipeline`, { ...stackProps, envName })
+const pipelineStack = new PipelineStack(app, `ottosurgical-${envName}-pipeline`, {
+  ...stackProps,
+  envName,
+  table: dataStack.table,
+  audioBucket: dataStack.audioBucket,
+})
+
+new ApiStack(app, `ottosurgical-${envName}-api`, {
+  ...stackProps,
+  envName,
+  userPool: authStack.userPool,
+  userPoolClient: authStack.userPoolClient,
+  table: dataStack.table,
+  audioBucket: dataStack.audioBucket,
+  stateMachine: pipelineStack.stateMachine,
+})
+
+// Empty for now — filled in at PRD §5 build-sequence step 8.
 new ObservabilityStack(app, `ottosurgical-${envName}-observability`, { ...stackProps, envName })

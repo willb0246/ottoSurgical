@@ -1,4 +1,4 @@
-import { ComponentType, FC, useEffect, useMemo, useRef, useState } from "react"
+import { ComponentType, FC, useMemo, useRef, useState } from "react"
 // eslint-disable-next-line no-restricted-imports
 import { TextInput, TextStyle, ViewStyle } from "react-native"
 
@@ -9,6 +9,7 @@ import { Text } from "@/components/Text"
 import { TextField, type TextFieldAccessoryProps } from "@/components/TextField"
 import { useAuth } from "@/context/AuthContext"
 import type { AppStackScreenProps } from "@/navigators/navigationTypes"
+import { cognitoSignIn } from "@/services/auth/cognitoAuthService"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
@@ -20,37 +21,36 @@ export const LoginScreen: FC<LoginScreenProps> = () => {
   const [authPassword, setAuthPassword] = useState("")
   const [isAuthPasswordHidden, setIsAuthPasswordHidden] = useState(true)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [attemptsCount, setAttemptsCount] = useState(0)
-  const { authEmail, setAuthEmail, setAuthToken, validationError } = useAuth()
+  const [isSigningIn, setIsSigningIn] = useState(false)
+  const [signInError, setSignInError] = useState("")
+  const { authEmail, setAuthEmail, setAuthToken, setSurgeonId, validationError } = useAuth()
 
   const {
     themed,
     theme: { colors },
   } = useAppTheme()
 
-  useEffect(() => {
-    // Here is where you could fetch credentials from keychain or storage
-    // and pre-fill the form fields.
-    setAuthEmail("ignite@infinite.red")
-    setAuthPassword("ign1teIsAwes0m3")
-  }, [setAuthEmail])
-
   const error = isSubmitted ? validationError : ""
 
-  function login() {
+  async function login() {
     setIsSubmitted(true)
-    setAttemptsCount(attemptsCount + 1)
+    setSignInError("")
 
-    if (validationError) return
+    if (validationError || !authPassword) return
 
-    // Make a request to your server to get an authentication token.
-    // If successful, reset the fields and set the token.
+    setIsSigningIn(true)
+    const result = await cognitoSignIn(authEmail ?? "", authPassword)
+    setIsSigningIn(false)
+
+    if (!result.success || !result.idToken) {
+      setSignInError(result.error ?? "Sign in failed.")
+      return
+    }
+
     setIsSubmitted(false)
     setAuthPassword("")
-    setAuthEmail("")
-
-    // We'll mock this with a fake token.
-    setAuthToken(String(Date.now()))
+    setSurgeonId(result.userId)
+    setAuthToken(result.idToken)
   }
 
   const PasswordRightAccessory: ComponentType<TextFieldAccessoryProps> = useMemo(
@@ -77,8 +77,8 @@ export const LoginScreen: FC<LoginScreenProps> = () => {
     >
       <Text testID="login-heading" tx="loginScreen:logIn" preset="heading" style={themed($logIn)} />
       <Text tx="loginScreen:enterDetails" preset="subheading" style={themed($enterDetails)} />
-      {attemptsCount > 2 && (
-        <Text tx="loginScreen:hint" size="sm" weight="light" style={themed($hint)} />
+      {signInError.length > 0 && (
+        <Text text={signInError} size="sm" weight="light" style={themed($hint)} />
       )}
 
       <TextField
@@ -116,6 +116,7 @@ export const LoginScreen: FC<LoginScreenProps> = () => {
         tx="loginScreen:tapToLogIn"
         style={themed($tapButton)}
         preset="reversed"
+        disabled={isSigningIn}
         onPress={login}
       />
     </Screen>

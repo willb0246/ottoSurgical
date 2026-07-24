@@ -1,12 +1,17 @@
 import { createContext, FC, PropsWithChildren, useCallback, useContext, useMemo } from "react"
 import { useMMKVString } from "react-native-mmkv"
 
+import { cognitoSignOut } from "@/services/auth/cognitoAuthService"
+
 export type AuthContextType = {
   isAuthenticated: boolean
   authToken?: string
   authEmail?: string
+  /** Cognito `sub` — the `surgeonId` in every wire-contract call (PRD §3.1). */
+  surgeonId?: string
   setAuthToken: (token?: string) => void
   setAuthEmail: (email: string) => void
+  setSurgeonId: (id?: string) => void
   logout: () => void
   validationError: string
 }
@@ -18,11 +23,14 @@ export interface AuthProviderProps {}
 export const AuthProvider: FC<PropsWithChildren<AuthProviderProps>> = ({ children }) => {
   const [authToken, setAuthToken] = useMMKVString("AuthProvider.authToken")
   const [authEmail, setAuthEmail] = useMMKVString("AuthProvider.authEmail")
+  const [surgeonId, setSurgeonId] = useMMKVString("AuthProvider.surgeonId")
 
   const logout = useCallback(() => {
+    cognitoSignOut().catch(() => undefined)
     setAuthToken(undefined)
     setAuthEmail("")
-  }, [setAuthEmail, setAuthToken])
+    setSurgeonId(undefined)
+  }, [setAuthEmail, setAuthToken, setSurgeonId])
 
   const validationError = useMemo(() => {
     if (!authEmail || authEmail.length === 0) return "can't be blank"
@@ -35,8 +43,10 @@ export const AuthProvider: FC<PropsWithChildren<AuthProviderProps>> = ({ childre
     isAuthenticated: !!authToken,
     authToken,
     authEmail,
+    surgeonId,
     setAuthToken,
     setAuthEmail,
+    setSurgeonId,
     logout,
     validationError,
   }

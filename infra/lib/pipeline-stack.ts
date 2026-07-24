@@ -7,6 +7,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda"
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs"
 import * as logs from "aws-cdk-lib/aws-logs"
 import * as s3 from "aws-cdk-lib/aws-s3"
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager"
 import * as sfn from "aws-cdk-lib/aws-stepfunctions"
 import * as tasks from "aws-cdk-lib/aws-stepfunctions-tasks"
 import * as sqs from "aws-cdk-lib/aws-sqs"
@@ -152,23 +153,23 @@ export class PipelineStack extends cdk.Stack {
       runtime,
     })
 
+    // Anthropic API key — this Lambda calls Anthropic directly, not Bedrock
+    // (see project memory "decision_llm_provider"). Placeholder secret value;
+    // set the real key post-deploy (never via CLI — see deploy notes).
+    const anthropicApiKeySecret = new secretsmanager.Secret(this, "AnthropicApiKey", {
+      secretName: `ottosurgical-${props.envName}-anthropic-api-key`,
+      description: "Anthropic API key for GenerateNote — set the real value post-deploy",
+    })
+
     const generateNote = new NodejsFunction(this, "GenerateNote", {
       entry: path.join(lambdaDir, "pipeline", "generateNote.ts"),
       timeout: cdk.Duration.seconds(120),
       memorySize: 512,
-      environment: { BEDROCK_MODEL_ID: "us.anthropic.claude-sonnet-4-6" },
+      environment: { ANTHROPIC_API_KEY_SECRET_ARN: anthropicApiKeySecret.secretArn },
       bundling,
       runtime,
     })
-    generateNote.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ["bedrock:InvokeModel"],
-        resources: [
-          `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/us.anthropic.claude-sonnet-4-6`,
-          `arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-4-6`,
-        ],
-      }),
-    )
+    anthropicApiKeySecret.grantRead(generateNote)
 
     const computeProvenance = new NodejsFunction(this, "ComputeProvenance", {
       entry: path.join(lambdaDir, "pipeline", "computeProvenance.ts"),

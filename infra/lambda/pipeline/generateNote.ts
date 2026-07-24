@@ -1,17 +1,22 @@
 /**
  * Pipeline step 4 — structured, evidence-gated note generation (PRD §3.3,
- * §5.2). Bedrock Claude, tool-use forced to the NoteField[] schema. The
+ * §5.2). Calls Anthropic's API directly (not Bedrock — see project memory
+ * "decision_llm_provider": the account already has a direct Anthropic BAA,
+ * so Bedrock's main advantage — one AWS BAA covering all model providers —
+ * is redundant here, and direct API access avoids Bedrock's account-level
+ * model-access gating). Tool-use forced to the NoteField[] schema. The
  * model must quote the exact supporting substring for every populated
  * field so computeProvenance can locate it by string match rather than
  * trusting model-reported character offsets (models are unreliable at
  * literal character counting).
  */
-import { BedrockRuntimeClient, ConverseCommand, type Tool } from "@aws-sdk/client-bedrock-runtime"
+import Anthropic from "@anthropic-ai/sdk"
+import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager"
 
 import type { NoteFieldKey } from "../../../app/types/scribe"
 
-const bedrock = new BedrockRuntimeClient({ maxAttempts: 5, retryMode: "adaptive" })
-const MODEL_ID = process.env.BEDROCK_MODEL_ID as string
+const secretsManager = new SecretsManagerClient({})
+const MODEL_ID = "claude-opus-4-8"
 
 interface Input {
   sessionId: string
@@ -47,36 +52,32 @@ export interface RawGeneratedField {
   quote: string
 }
 
-const emitTool: Tool = {
-  toolSpec: {
-    name: "emit_note_fields",
-    description:
-      "Emit the operative note as exactly one entry per required field key, evidence-gated against the transcript.",
-    inputSchema: {
-      json: {
-        type: "object",
-        properties: {
-          fields: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                key: { type: "string", enum: FIELD_KEYS },
-                status: { type: "string", enum: ["populated", "not_stated"] },
-                value: { type: "string" },
-                quote: {
-                  type: "string",
-                  description:
-                    "Exact verbatim substring copied from the transcript that supports `value`. Empty string if status is not_stated.",
-                },
-              },
-              required: ["key", "status", "value", "quote"],
+const emitTool: Anthropic.Tool = {
+  name: "emit_note_fields",
+  description:
+    "Emit the operative note as exactly one entry per required field key, evidence-gated against the transcript.",
+  input_schema: {
+    type: "object",
+    properties: {
+      fields: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            key: { type: "string", enum: FIELD_KEYS },
+            status: { type: "string", enum: ["populated", "not_stated"] },
+            value: { type: "string" },
+            quote: {
+              type: "string",
+              description:
+                "Exact verbatim substring copied from the transcript that supports `value`. Empty string if status is not_stated.",
             },
           },
+          required: ["key", "status", "value", "quote"],
         },
-        required: ["fields"],
       },
     },
+    required: ["fields"],
   },
 }
 
@@ -99,22 +100,40 @@ ${transcript}
 """`
 }
 
-export async function handler(input: Input) {
-  const response = await bedrock.send(
-    new ConverseCommand({
-      modelId: MODEL_ID,
-      messages: [{ role: "user", content: [{ text: buildPrompt(input.procedureType, input.transcript) }] }],
-      inferenceConfig: { maxTokens: 4096, temperature: 0 },
-      toolConfig: { tools: [emitTool], toolChoice: { tool: { name: "emit_note_fields" } } },
-    }),
-  )
+let cachedClient: Anthropic | null = null
 
-  const toolBlock = response.output?.message?.content?.find((b) => b.toolUse)?.toolUse
-  if (!toolBlock?.input) {
-    throw new Error(`Bedrock did not return a tool_use block (stopReason=${response.stopReason})`)
+async function getClient(): Promise<Anthropic> {
+  if (cachedClient) return cachedClient
+  const secretId = process.env.ANTHROPIC_API_KEY_SECRET_ARN as string
+  const result = await secretsManager.send(new GetSecretValueCommand({ SecretId: secretId }))
+  cachedClient = new Anthropic({ apiKey: result.SecretString })
+  return cachedClient
+}
+
+export async function handler(input: Input) {
+  const client = await getClient()
+
+  const response = await client.messages.create({
+    model: MODEL_ID,
+    max_tokens: 4096,
+    output_config: { effort: "high" },
+    messages: [{ role: "user", content: buildPrompt(input.procedureType, input.transcript) }],
+    tools: [emitTool],
+    tool_choice: { type: "tool", name: "emit_note_fields" },
+  })
+
+  if (response.stop_reason === "refusal") {
+    throw new Error("Anthropic API refused the request (stop_reason=refusal)")
   }
 
-  const rawFields = (toolBlock.input as unknown as { fields: RawGeneratedField[] }).fields ?? []
+  const toolBlock = response.content.find(
+    (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
+  )
+  if (!toolBlock) {
+    throw new Error(`Anthropic API did not return a tool_use block (stop_reason=${response.stop_reason})`)
+  }
+
+  const rawFields = (toolBlock.input as { fields: RawGeneratedField[] }).fields ?? []
 
   // Defense in depth: guarantee exactly one entry per required key even if
   // the model dropped one — treat a missing key as not_stated.

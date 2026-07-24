@@ -1,4 +1,4 @@
-import { ReactNode, useRef, useState } from "react"
+import { ElementRef, ReactNode, useRef, useState } from "react"
 import {
   KeyboardAvoidingView,
   KeyboardAvoidingViewProps,
@@ -11,10 +11,7 @@ import {
 } from "react-native"
 import { useScrollToTop } from "@react-navigation/native"
 import { SystemBars, SystemBarsProps, SystemBarStyle } from "react-native-edge-to-edge"
-import {
-  KeyboardAwareScrollView,
-  type KeyboardAwareScrollViewRef,
-} from "react-native-keyboard-controller"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 import { useAppTheme } from "@/theme/context"
 import { $styles } from "@/theme/styles"
@@ -199,7 +196,7 @@ function ScreenWithScrolling(props: ScreenProps) {
     style,
   } = props as ScrollScreenProps
 
-  const ref = useRef<KeyboardAwareScrollViewRef>(null)
+  const ref = useRef<ElementRef<typeof KeyboardAwareScrollView>>(null)
 
   const { scrollEnabled, onContentSizeChange, onLayout } = useAutoPreset(props as AutoScreenProps)
 

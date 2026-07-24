@@ -29,6 +29,9 @@
       ],
       "@assets/*": [
         "./assets/*"
+      ],
+      "beacon-scribe-audio": [
+        "./modules/beacon-scribe-audio"
       ]
     },
     "typeRoots": [

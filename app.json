@@ -54,7 +54,8 @@
         }
       }
     ],
-    "expo-build-properties"
+    "expo-build-properties",
+    "./modules/beacon-scribe-audio/app.plugin.js"
   ],
   "experiments": {
     "tsconfigPaths": true

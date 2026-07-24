@@ -1,0 +1,7 @@
+{
+  "name": "beacon-scribe-audio",
+  "version": "0.1.0",
+  "description": "Native AirPods high-quality capture + on-device wake word for the intraoperative scribe (iOS)",
+  "main": "index.ts",
+  "private": true
+}

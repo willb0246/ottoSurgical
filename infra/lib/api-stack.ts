@@ -28,6 +28,7 @@ export interface ApiStackProps extends cdk.StackProps {
  */
 export class ApiStack extends cdk.Stack {
   public readonly httpApi: apigwv2.HttpApi
+  public readonly functions: lambda.IFunction[] = []
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props)
@@ -117,6 +118,8 @@ export class ApiStack extends cdk.Stack {
       methods: [apigwv2.HttpMethod.POST],
       integration: new HttpLambdaIntegration("ApproveIntegration", approveFn),
     })
+
+    this.functions.push(getUploadUrlFn, ingestFn, getDraftsFn, getDraftFn, approveFn)
 
     new cdk.CfnOutput(this, "ApiUrl", { value: this.httpApi.apiEndpoint, description: "EXPO_PUBLIC_API_URL" })
   }

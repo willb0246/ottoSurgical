@@ -62,6 +62,7 @@ const VOCABULARY_PHRASES = [
  */
 export class PipelineStack extends cdk.Stack {
   public readonly stateMachine: sfn.StateMachine
+  public readonly functions: lambda.IFunction[] = []
 
   constructor(scope: Construct, id: string, props: PipelineStackProps) {
     super(scope, id, props)
@@ -188,6 +189,15 @@ export class PipelineStack extends cdk.Stack {
       runtime,
     })
     props.table.grantWriteData(writeDraft)
+
+    this.functions.push(
+      startTranscriptionJobs,
+      checkTranscriptionStatus,
+      postCorrection,
+      generateNote,
+      computeProvenance,
+      writeDraft,
+    )
 
     const logGroup = new logs.LogGroup(this, "StateMachineLogs", {
       logGroupName: `/aws/vendedlogs/states/ottosurgical-${props.envName}-pipeline`,

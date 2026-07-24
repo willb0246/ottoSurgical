@@ -37,7 +37,7 @@ const pipelineStack = new PipelineStack(app, `ottosurgical-${envName}-pipeline`,
   audioBucket: dataStack.audioBucket,
 })
 
-new ApiStack(app, `ottosurgical-${envName}-api`, {
+const apiStack = new ApiStack(app, `ottosurgical-${envName}-api`, {
   ...stackProps,
   envName,
   userPool: authStack.userPool,
@@ -47,5 +47,10 @@ new ApiStack(app, `ottosurgical-${envName}-api`, {
   stateMachine: pipelineStack.stateMachine,
 })
 
-// Empty for now — filled in at PRD §5 build-sequence step 8.
-new ObservabilityStack(app, `ottosurgical-${envName}-observability`, { ...stackProps, envName })
+new ObservabilityStack(app, `ottosurgical-${envName}-observability`, {
+  ...stackProps,
+  envName,
+  stateMachine: pipelineStack.stateMachine,
+  httpApi: apiStack.httpApi,
+  functions: [...pipelineStack.functions, ...apiStack.functions],
+})

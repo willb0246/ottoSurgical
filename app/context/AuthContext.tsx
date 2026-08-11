@@ -1,7 +1,8 @@
 import { createContext, FC, PropsWithChildren, useCallback, useContext, useMemo } from "react"
-import { useMMKVString } from "react-native-mmkv"
+import { useMMKVObject, useMMKVString } from "react-native-mmkv"
 
 import { cognitoSignOut } from "@/services/auth/cognitoAuthService"
+import type { Specialty } from "@/types/scribe"
 
 export type AuthContextType = {
   isAuthenticated: boolean
@@ -9,9 +10,18 @@ export type AuthContextType = {
   authEmail?: string
   /** Cognito `sub` — the `surgeonId` in every wire-contract call (PRD §3.1). */
   surgeonId?: string
+  /**
+   * The surgical specialties this surgeon practices — set once in Setup >
+   * My specialties, applied to every surgery they create. Multi-select
+   * (a surgeon can be e.g. both endovascular and open vascular); today the
+   * app uses only the first entry for transcription vocabulary selection —
+   * combining multiple vocabularies per case is future work.
+   */
+  specialties: Specialty[]
   setAuthToken: (token?: string) => void
   setAuthEmail: (email: string) => void
   setSurgeonId: (id?: string) => void
+  setSpecialties: (specialties: Specialty[]) => void
   logout: () => void
   validationError: string
 }
@@ -24,6 +34,7 @@ export const AuthProvider: FC<PropsWithChildren<AuthProviderProps>> = ({ childre
   const [authToken, setAuthToken] = useMMKVString("AuthProvider.authToken")
   const [authEmail, setAuthEmail] = useMMKVString("AuthProvider.authEmail")
   const [surgeonId, setSurgeonId] = useMMKVString("AuthProvider.surgeonId")
+  const [specialties, setSpecialties] = useMMKVObject<Specialty[]>("AuthProvider.specialties")
 
   const logout = useCallback(() => {
     cognitoSignOut().catch(() => undefined)
@@ -44,9 +55,11 @@ export const AuthProvider: FC<PropsWithChildren<AuthProviderProps>> = ({ childre
     authToken,
     authEmail,
     surgeonId,
+    specialties: specialties ?? [],
     setAuthToken,
     setAuthEmail,
     setSurgeonId,
+    setSpecialties,
     logout,
     validationError,
   }

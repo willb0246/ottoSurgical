@@ -4,6 +4,8 @@
  *   SESSION#<sessionId> / SEGMENT#<segmentId> -> segment metadata
  *   SESSION#<sessionId> / DRAFT               -> DraftNote
  *   SESSION#<sessionId> / EDIT#<isoTimestamp>  -> EditLogEntry (append-only)
+ *   SURGEON#<surgeonId> / PROCEDURE#<procedureId> -> custom procedure
+ *   SURGEON#<surgeonId> / TEMPLATE#<procedureId>  -> that procedure's note template
  * bySurgeon GSI (surgeonId, startedAt) only has surgeonId/startedAt set on
  * META items, so it naturally returns one row per session.
  */
@@ -20,4 +22,7 @@ export const keys = {
   segment: (segmentId: string) => `SEGMENT#${segmentId}`,
   draft: () => "DRAFT",
   edit: (isoTimestamp: string) => `EDIT#${isoTimestamp}`,
+  surgeon: (surgeonId: string) => `SURGEON#${surgeonId}`,
+  procedure: (procedureId: string) => `PROCEDURE#${procedureId}`,
+  template: (procedureId: string) => `TEMPLATE#${procedureId}`,
 }

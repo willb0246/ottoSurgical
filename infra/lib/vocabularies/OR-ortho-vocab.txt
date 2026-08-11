@@ -1,0 +1,70 @@
+Phrase	SoundsLike	IPA	DisplayAs
+left			
+right			
+bilateral			
+Zimmer-Biomet			Zimmer Biomet
+Stryker			
+DePuy-Synthes			DePuy Synthes
+Smith-and-Nephew			Smith & Nephew
+Persona			
+Vanguard			
+Triathlon			
+NexGen			
+Corail			
+Accolade			
+Taperloc			
+tranexamic-acid			tranexamic acid
+cefazolin			
+vancomycin			
+bupivacaine			
+arthroplasty			
+acetabulum			
+femoral			
+tibial			
+patella			
+polyethylene			
+ipsilateral			
+contralateral			
+proximal			
+distal			
+anterior			
+posterior			
+medial			
+lateral			
+superior			
+inferior			
+cranial			
+caudal			
+bovie			
+cath			
+cautery			
+electrocautery			
+Raytec			
+rongeur			
+Foley			
+trocar			
+hemostat			
+Kocher			
+DeBakey			DeBakey
+Metzenbaum			
+Weitlaner			
+Yankauer			
+Cell-Saver			Cell Saver
+pledget			
+Prolene			
+Vicryl			
+Silk			
+PDS			
+A.-line			A-line
+central-line			central line
+E.T.T.			
+L.M.A.			
+E.B.L.			
+M.A.P.			
+A.C.T.			
+cc			
+lidocaine			
+epinephrine			
+mannitol			
+dexamethasone			
+propofol			

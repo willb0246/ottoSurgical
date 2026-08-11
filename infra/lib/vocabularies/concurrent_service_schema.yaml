@@ -1,0 +1,190 @@
+# =============================================================================
+# CONCURRENT-SERVICE SCHEMA  (Shape 2: the "done together, separately billable" layer)
+# =============================================================================
+# This is the DETECTION half of the concurrent-service feature. It pairs with the
+# SUPPRESSION half you already built (ncci_ingest.py -> bundled_into.json /
+# bundled_by.json). Neither half is safe alone:
+#   * detection alone  -> prompts for services that may be bundled = upcoding risk
+#   * suppression alone -> can't surface what was done-but-not-said = missed recovery
+# The `suppress_when` field is the JOIN between them.
+#
+# ---------------------------------------------------------------------------
+# VALIDATION STATUS — READ THIS FIRST
+# ---------------------------------------------------------------------------
+# Every co-occurrence pairing below is a SCAFFOLD populated from general
+# endovascular knowledge, NOT from your biller. It is here to show the STRUCTURE
+# and to give the discovery conversation something concrete to react to. Do NOT
+# treat any `expected_concurrent` entry or `co_occurrence_prior` value as ground
+# truth until a neuro-endovascular biller/coder has confirmed it. The whole point
+# of the discovery question set is to replace these guesses with asserted fact.
+#
+# `co_occurrence_prior` values are ALL placeholders. They are additionally biased
+# low by under-documentation (the problem you're solving), so even a corpus won't
+# give you a clean prior — biller judgment is the better signal until proven.
+# =============================================================================
+
+metadata:
+  schema_version: "0.1-scaffold"
+  procedure_family: endovascular_neuro
+  validation_state: UNVALIDATED_SCAFFOLD      # -> BILLER_ASSERTED -> CORPUS_CONFIRMED
+  suppression_source: "ncci_out/bundled_into.json (from ncci_ingest.py)"
+  joins_to:
+    - anatomy_schema_starter.yaml   # for the vessel-count / subsumption mechanic
+    - "cpt_out/_combined.json"      # descriptors + lay terms (from cpt_parser.py)
+
+# -----------------------------------------------------------------------------
+# FIELD CONTRACT — what each concurrent-service entry means
+# -----------------------------------------------------------------------------
+# base_procedure       : the anchor case this concurrent service attaches to
+# service_id           : stable id for the co-occurring service
+# expected_concurrent  : human name of the service that routinely co-occurs
+# candidate_codes      : the CPT code(s) this service would map to (for the join)
+# co_occurrence_prior  : PLACEHOLDER 0-1 frequency; needs biller/corpus
+# suppress_when        : contexts where NCCI/base-code bundles this -> DO NOT prompt
+#                        as separately billable. Each references a base code you
+#                        check against bundled_into.json at runtime.
+# prompt_text          : CLINICAL reality question. Ships now. Asks what happened.
+# billing_note         : ADVISORY coding consequence. Counsel-gated. Walled off.
+# over_prompt_guard    : note on when surfacing this would be an upcoding risk
+# -----------------------------------------------------------------------------
+
+concurrent_services:
+
+  # ==========================================================================
+  # ANCHOR: Diagnostic cerebral angiogram
+  # ==========================================================================
+  - base_procedure: diagnostic_cerebral_angiogram
+    services:
+
+      - service_id: fluoro_guidance
+        expected_concurrent: Fluoroscopic guidance
+        candidate_codes: ["76000"]          # verify vs your cpt_out + NCCI
+        co_occurrence_prior: 0.99            # PLACEHOLDER
+        suppress_when:
+          # Fluoro is frequently bundled into the catheterization/S&I base codes.
+          # At runtime: if any base code in the case has this candidate as a
+          # Column-2 in bundled_into.json with modifier_indicator 0 -> suppress.
+          - base_code_bundles_this: true
+            check_against: "ncci_out/bundled_into.json"
+        prompt_text: "Was fluoroscopic guidance used during this case?"
+        billing_note: "[COUNSEL-GATED] Fluoro guidance may be included in the S&I/base code; separable only if NCCI indicates."
+        over_prompt_guard: "Almost always bundled in angiography. Default to SUPPRESS-and-explain, not prompt-to-add."
+
+      - service_id: imaging_si
+        expected_concurrent: Radiological supervision & interpretation (angiographic runs)
+        candidate_codes: ["75xxx"]          # resolve to specific S&I codes with biller
+        co_occurrence_prior: 0.95            # PLACEHOLDER
+        suppress_when:
+          - context: combined_neuro_code_in_use
+            note: "Cervicocerebral angiography S&I is largely absorbed into the 361xx combined codes. This is THE double-bill trap."
+            check_against: "ncci_out/bundled_into.json"
+        prompt_text: "Was diagnostic imaging performed and interpreted during this case?"
+        billing_note: "[COUNSEL-GATED] S&I separately reportable ONLY where not bundled into a combined cervicocerebral code."
+        over_prompt_guard: "High risk. Do NOT prompt to add S&I on combined-code cases — that is coaching a double-bill."
+
+  # ==========================================================================
+  # ANCHOR: Carotid / cervicocerebral stent placement
+  # ==========================================================================
+  - base_procedure: carotid_stent_placement
+    services:
+
+      - service_id: pre_angioplasty
+        expected_concurrent: Balloon angioplasty (in same territory as stent)
+        candidate_codes: ["37246", "37247"]  # verify
+        co_occurrence_prior: 0.70            # PLACEHOLDER
+        suppress_when:
+          - context: angioplasty_within_stent_territory
+            note: "Angioplasty in the SAME vessel/territory as the stent is typically bundled into the stent code."
+            check_against: "ncci_out/bundled_into.json"
+        prompt_text: "Was balloon angioplasty performed? If so, in which vessel(s)?"
+        billing_note: "[COUNSEL-GATED] Angioplasty in stent territory bundles; separate territory may be separately reportable."
+        over_prompt_guard: "Suppress when same-territory. Only surface as separate if a DISTINCT territory is confirmed."
+
+      - service_id: completion_angio
+        expected_concurrent: Completion / control angiography
+        candidate_codes: ["75xxx"]          # resolve with biller
+        co_occurrence_prior: 0.90            # PLACEHOLDER
+        suppress_when:
+          - context: completion_angio_of_treated_vessel
+            note: "Control angiography of the treated vessel is usually included in the intervention."
+            check_against: "ncci_out/bundled_into.json"
+        prompt_text: "Was completion angiography performed after the intervention?"
+        billing_note: "[COUNSEL-GATED] Completion angiography of the treated territory typically bundled."
+        over_prompt_guard: "Default SUPPRESS. This co-occurs ~always but is ~always included."
+
+      - service_id: access_ultrasound
+        expected_concurrent: Ultrasound guidance for vascular access
+        candidate_codes: ["76937"]          # verify
+        co_occurrence_prior: 0.50            # PLACEHOLDER
+        suppress_when: []                    # often separately reportable IF documented
+        prompt_text: "Was ultrasound guidance used to obtain vascular access?"
+        billing_note: "[COUNSEL-GATED] Separately reportable with permanent image + documented interpretation."
+        over_prompt_guard: "Separable but has a DOCUMENTATION requirement (stored image). Prompt for the documentation, not just the act."
+
+      - service_id: closure_device
+        expected_concurrent: Arterial closure device
+        candidate_codes: []                 # resolve with biller
+        co_occurrence_prior: 0.60            # PLACEHOLDER
+        suppress_when: []
+        prompt_text: "Was an arterial closure device used at the access site?"
+        billing_note: "[COUNSEL-GATED] Reportability varies; confirm with biller."
+        over_prompt_guard: "Confirm billability before surfacing at all."
+
+  # ==========================================================================
+  # ANCHOR: Mechanical thrombectomy
+  # ==========================================================================
+  - base_procedure: mechanical_thrombectomy
+    services:
+
+      - service_id: thrombectomy_imaging
+        expected_concurrent: Angiographic imaging during thrombectomy
+        candidate_codes: ["75xxx"]
+        co_occurrence_prior: 0.98            # PLACEHOLDER
+        suppress_when:
+          - context: imaging_included_in_thrombectomy_code
+            note: "Thrombectomy codes were specifically built to INCLUDE the associated imaging and catheterization."
+            check_against: "ncci_out/bundled_into.json"
+        prompt_text: "Was angiographic imaging performed during the thrombectomy?"
+        billing_note: "[COUNSEL-GATED] Imaging generally included in the thrombectomy code — verify against NCCI."
+        over_prompt_guard: "VERY HIGH RISK of double-bill. Thrombectomy is the canonical 'everything is bundled' code. Default SUPPRESS."
+
+      - service_id: additional_territory_catheterization
+        expected_concurrent: Catheterization of a territory beyond the thrombectomy target
+        candidate_codes: ["36217", "36218"]
+        co_occurrence_prior: 0.40            # PLACEHOLDER
+        suppress_when:
+          - context: catheterization_within_thrombectomy_territory
+            note: "Catheterization within the treated territory is included; a SEPARATE diagnostic territory may be reportable."
+            check_against: "ncci_out/bundled_into.json"
+            cross_ref: "anatomy_schema_starter.yaml traversal — use subsumption rules to decide separate vs included"
+        prompt_text: "Were any vessels outside the treated territory selectively catheterized and imaged?"
+        billing_note: "[COUNSEL-GATED] Separate diagnostic territory may be reportable; same-territory catheterization is bundled."
+        over_prompt_guard: "This is where anatomy + NCCI must agree. Do not surface without the traversal confirming a distinct family."
+
+# -----------------------------------------------------------------------------
+# RUNTIME JOIN LOGIC (declarative description of how the two halves combine)
+# -----------------------------------------------------------------------------
+# For a given case:
+#   1. Detection: from the narrated base procedure, look up its concurrent_services.
+#   2. For each, ask the CLINICAL prompt_text (did it happen?).
+#   3. If surgeon confirms it happened:
+#        a. Check suppress_when against ncci_out/bundled_into.json for the actual
+#           base code(s) in this case + the candidate_codes here.
+#        b. If bundled (modifier_indicator 0) -> SUPPRESS-BUT-RETAIN: show the
+#           surgeon the item with the explanation that it's included, do not
+#           present it as separately billable.
+#        c. If not bundled -> surface as a confirmed concurrent service (still
+#           behind the billing wall / counsel gate).
+#   4. Never auto-add. Never coach a phrase. Reality question in, human confirm,
+#      suppression check, then a walled advisory note. That is the whole contract.
+# -----------------------------------------------------------------------------
+
+runtime_join:
+  detection_source: this_file
+  suppression_source: "ncci_out/bundled_into.json"
+  subsumption_source: "anatomy_schema_starter.yaml"
+  default_on_conflict: suppress_and_explain     # safer to under-prompt than over-prompt
+  never:
+    - auto_populate_clinical_content
+    - suggest_billing_phrase_without_counsel_signoff
+    - present_bundled_service_as_separately_billable

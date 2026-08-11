@@ -1,0 +1,235 @@
+Phrase	SoundsLike	IPA	DisplayAs
+left			
+right			
+bilateral			
+ipsilateral			
+contralateral			
+proximal			
+distal			
+anterior			
+posterior			
+medial			
+lateral			
+superior			
+inferior			
+cranial			
+caudal			
+bovie			
+cautery			
+electrocautery			
+Raytec			
+Kerrison			
+rongeur			
+Foley			
+trocar			
+hemostat			
+Kocher			
+DeBakey			DeBakey
+Metzenbaum			
+Weitlaner			
+Yankauer			
+Cell-Saver			Cell Saver
+Fogarty			
+Rummel			Rummel
+pledget			
+Prolene			
+Vicryl			
+Silk			
+PDS			
+A.-line			A-line
+central-line			central line
+E.T.T.			
+L.M.A.			
+E.B.L.			
+M.A.P.			
+A.C.T.			
+cc			
+tranexamic-acid			tranexamic acid
+cefazolin			
+vancomycin			
+heparin			
+protamine			
+lidocaine			
+bupivacaine			
+epinephrine			
+mannitol			
+dexamethasone			
+propofol			
+nicardipine			
+labetalol			
+verapamil			
+nimodipine			
+dexmedetomidine			
+M.C.A.			MCA
+A.C.A.			ACA
+P.C.A.			PCA
+I.C.A.			ICA
+E.C.A.			ECA
+C.C.A.			CCA
+A.C.O.M.			ACOM
+P.C.O.M.			PCOM
+V.A.			VA
+B.A.			BA
+S.C.A.			SCA
+A.V.M.			AVM
+A.V.F.			AVF
+d.A.V.F.			dAVF
+T.I.C.I.			TICI
+m.R.S.			mRS
+N.I.H.S.S.			NIHSS
+D.S.A.			DSA
+C.T.A.			CTA
+M.R.A.			MRA
+F.F.R.			FFR
+PICA			PICA
+AICA			AICA
+ACOM			ACOM
+PCOM			PCOM
+TICI			TICI
+cavernous			
+carotid			
+vertebral			
+basilar			
+ophthalmic			
+petrous			
+supraclinoid			
+cervical			
+innominate			
+brachiocephalic			
+subclavian			
+axillary			
+brachial			
+radial			
+femoral			
+iliac			
+aorta			
+aortic			
+lenticulostriate			
+choroidal			
+pericallosal			
+callosomarginal			
+angular			
+Sylvian			
+cerebellar			
+thalamoperforator			
+A.-com			A-comm
+P.-com			P-comm
+M.-one			M1
+M.-two			M2
+M.-three			M3
+A.-one			A1
+A.-two			A2
+P.-one			P1
+P.-two			P2
+V.-one			V1
+V.-two			V2
+V.-three			V3
+V.-four			V4
+C.-one			C1
+C.-two			C2
+C.-six			C6
+C.-seven			C7
+thrombectomy			
+aspiration			
+angioplasty			
+embolization			
+coiling			
+stenting			
+cannulation			
+cannulate			
+catheterization			
+recanalization			
+revascularization			
+endovascular			
+microcatheter			
+microwire			
+roadmap			
+roadmapping			
+run			
+injection			
+subtraction			
+flow-diversion			flow diversion
+balloon-guide			balloon guide
+stent-retriever			stent retriever
+liquid-embolic			liquid embolic
+provocative-testing			provocative testing
+Solitaire			
+Trevo			
+Embotrap			
+Penumbra			
+A.C.E.-sixty-eight			ACE 68
+Sofia			Sofia
+React			React
+Pipeline			
+Surpass			
+F.R.E.D.			FRED
+Woven-EndoBridge			Woven EndoBridge
+WEB			WEB
+Atlas			Atlas
+Neuroform			
+Enterprise			
+L.V.I.S.			LVIS
+Onyx			
+n-BCA			n-BCA
+Squid			Squid
+Target			
+GDC			
+Axium			
+Marksman			
+Phenom			
+Headway			
+Traxcess			
+Synchro			
+Aristotle			
+Walrus			Walrus
+Cerebase			Cerebase
+Benchmark			
+Neuron			
+Fubuki			
+Ballast			Ballast
+Wallstent			
+Precise			
+Xact			
+Emboshield			
+aneurysm			
+dissection			
+stenosis			
+occlusion			
+thrombus			
+embolus			
+vasospasm			
+pseudoaneurysm			
+fistula			
+nidus			
+hemorrhage			
+subarachnoid			
+intraparenchymal			
+infarct			
+collateral			
+tortuosity			
+ectasia			
+dolichoectasia			
+moyamoya			
+A.S.P.E.C.T.S.			ASPECTS
+neck			
+dome			
+fundus			
+wide-necked			wide necked
+Seldinger			
+micropuncture			
+sheath			
+French			
+Fr			Fr
+guide-catheter			guide catheter
+distal-access			distal access
+intermediate-catheter			intermediate catheter
+groin			
+radial-access			radial access
+transradial			
+transfemoral			
+closure-device			closure device
+Angio-Seal			Angio-Seal
+Perclose			Perclose
+patency			
+recanalized			
+first-pass			first pass

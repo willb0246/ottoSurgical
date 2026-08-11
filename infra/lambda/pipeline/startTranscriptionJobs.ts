@@ -8,10 +8,10 @@ import { StartTranscriptionJobCommand, TranscribeClient } from "@aws-sdk/client-
 import { QueryCommand } from "@aws-sdk/lib-dynamodb"
 
 import { ddb, keys, TABLE_NAME } from "../shared/ddb"
+import { resolveVocabularyName } from "../shared/vocabulary"
 
 const transcribe = new TranscribeClient({})
 const AUDIO_BUCKET_NAME = process.env.AUDIO_BUCKET_NAME as string
-const VOCABULARY_NAME = process.env.VOCABULARY_NAME as string
 
 interface PipelineInput {
   sessionId: string
@@ -25,6 +25,8 @@ interface SegmentRef {
 }
 
 export async function handler(input: PipelineInput) {
+  const vocabularyName = await resolveVocabularyName(input.surgeonId, input.procedureType)
+
   const result = await ddb.send(
     new QueryCommand({
       TableName: TABLE_NAME,
@@ -49,7 +51,7 @@ export async function handler(input: PipelineInput) {
         LanguageCode: "en-US",
         MediaFormat: "wav",
         Media: { MediaFileUri: `s3://${AUDIO_BUCKET_NAME}/${audioKey}` },
-        Settings: { VocabularyName: VOCABULARY_NAME },
+        Settings: { VocabularyName: vocabularyName },
       }),
     )
     segments.push({ segmentId, jobName })

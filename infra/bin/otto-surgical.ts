@@ -45,6 +45,7 @@ const apiStack = new ApiStack(app, `ottosurgical-${envName}-api`, {
   table: dataStack.table,
   audioBucket: dataStack.audioBucket,
   stateMachine: pipelineStack.stateMachine,
+  vocabularyNameBySpecialty: pipelineStack.vocabularyNameBySpecialty,
 })
 
 new ObservabilityStack(app, `ottosurgical-${envName}-observability`, {

@@ -25,6 +25,10 @@ export interface RecordedSegment {
 export interface StoredSession {
   sessionId: string
   procedureType: ProcedureType
+  /** Snapshot of the procedure's label at case start, for history display even if later renamed. */
+  procedureLabel: string
+  /** Surgeon-given case title, e.g. patient initials or room number. */
+  title?: string
   startedAt: string
   endedAt?: string
   /** Route telemetry captured at session start (HQ vs HFP, sample rate). */

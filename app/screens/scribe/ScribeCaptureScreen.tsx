@@ -15,12 +15,13 @@ import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
 import { useAuth } from "@/context/AuthContext"
 import { useScribeAudio } from "@/hooks/useScribeAudio"
-import type { AppStackScreenProps } from "@/navigators/navigationTypes"
+import type { ScribeStackScreenProps } from "@/navigators/navigationTypes"
 import { getUploadUrl, ingestSegment } from "@/services/api/scribeApi"
 import { useAppTheme } from "@/theme/context"
 import { addSegment, updateSession } from "@/utils/scribe/sessionStore"
+import { useHeader } from "@/utils/useHeader"
 
-interface ScribeCaptureScreenProps extends AppStackScreenProps<"ScribeCapture"> {}
+interface ScribeCaptureScreenProps extends ScribeStackScreenProps<"ScribeCapture"> {}
 
 // "Beacon" is an uncommon word the recognizer easily mishears, so we accept
 // close variants too. contextualStrings (native side) biases toward these.
@@ -50,6 +51,26 @@ export const ScribeCaptureScreen: FC<ScribeCaptureScreenProps> = function Scribe
   // trigger the pipeline, since the wire contract has no separate
   // "just end the case" call (PRD §3.4).
   const lastIngestedRef = useRef<{ segmentId: string; audioKey: string } | null>(null)
+  // Flipped just before the intentional `endCase` replace() so the
+  // beforeRemove guard below lets that one navigation through.
+  const allowLeaveRef = useRef(false)
+
+  useHeader({ title: "Capture" })
+
+  // Block back navigation (gesture + Android hardware back — there's no
+  // header back button to begin with) for the entire time this screen is
+  // mounted, regardless of audio.status. A live session exists as soon as
+  // this screen is reached (ScribeProcedureSelectScreen already created it),
+  // so idle/listening states need the same protection as capturing — the
+  // only supported way off this screen is the explicit "End case" button.
+  // Do not gate this on audio.status === "capturing"; that would reopen the
+  // gap during idle/listening.
+  useEffect(() => {
+    return navigation.addListener("beforeRemove", (e) => {
+      if (allowLeaveRef.current) return
+      e.preventDefault()
+    })
+  }, [navigation])
 
   // Persist each recorded utterance to the session as it lands, then upload
   // + ingest it against the real backend (PRD §5 step 4).
@@ -134,12 +155,13 @@ export const ScribeCaptureScreen: FC<ScribeCaptureScreenProps> = function Scribe
       }
     }
 
+    allowLeaveRef.current = true
     navigation.replace("ScribeReview", { sessionId })
   }
 
   if (!audio.available) {
     return (
-      <Screen preset="fixed" contentContainerStyle={$center}>
+      <Screen preset="fixed" contentContainerStyle={$center} safeAreaEdges={["bottom"]}>
         <Text preset="heading" text="Device build required" />
         <Text
           preset="default"

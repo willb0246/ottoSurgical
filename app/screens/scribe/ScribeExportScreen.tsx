@@ -13,12 +13,13 @@ import { useFocusEffect } from "@react-navigation/native"
 import { Button } from "@/components/Button"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
-import type { AppStackScreenProps } from "@/navigators/navigationTypes"
+import type { ScribeStackScreenProps } from "@/navigators/navigationTypes"
 import { getDraft } from "@/services/api/scribeApi"
 import { useAppTheme } from "@/theme/context"
 import { SAFETY_LABEL, type DraftNote } from "@/types/scribe"
+import { useHeader } from "@/utils/useHeader"
 
-interface ScribeExportScreenProps extends AppStackScreenProps<"ScribeExport"> {}
+interface ScribeExportScreenProps extends ScribeStackScreenProps<"ScribeExport"> {}
 
 type LoadState = "loading" | "not_final" | "ready" | "error"
 
@@ -65,6 +66,8 @@ export const ScribeExportScreen: FC<ScribeExportScreenProps> = function ScribeEx
   const [copied, setCopied] = useState(false)
   const [actionError, setActionError] = useState("")
 
+  useHeader({ title: "Export", leftIcon: "back", onLeftPress: () => navigation.goBack() })
+
   useFocusEffect(
     useCallback(() => {
       setLoadState("loading")
@@ -106,8 +109,6 @@ export const ScribeExportScreen: FC<ScribeExportScreenProps> = function ScribeEx
   return (
     <Screen preset="fixed" contentContainerStyle={$content} safeAreaEdges={["bottom"]}>
       <ScrollView contentContainerStyle={$scrollContent}>
-        <Text preset="heading" text="Export" style={$title} />
-
         <View style={[$banner, { backgroundColor: theme.colors.palette.neutral200 }]}>
           <Text preset="formHelper" text={SAFETY_LABEL} style={{ color: theme.colors.textDim }} />
         </View>
@@ -187,7 +188,6 @@ export const ScribeExportScreen: FC<ScribeExportScreenProps> = function ScribeEx
 
 const $content: ViewStyle = { flex: 1 }
 const $scrollContent: ViewStyle = { padding: 20, paddingBottom: 40 }
-const $title: TextStyle = { marginBottom: 16 }
 const $banner: ViewStyle = { borderRadius: 10, padding: 12, marginBottom: 16 }
 const $body: TextStyle = { fontSize: 16, lineHeight: 22, marginBottom: 16 }
 const $fieldRow: ViewStyle = { marginBottom: 12 }

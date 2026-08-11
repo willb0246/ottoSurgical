@@ -9,8 +9,12 @@
  *
  * See prds/intra-op-scribe.md — §6 (schema), §5 (functional reqs), §7 (safety).
  *
- * Plain TypeScript, no zod — mirrors app/types/survey.ts. Unions are CLOSED
- * SETS: do not extend without a PRD change.
+ * Plain TypeScript, no zod — mirrors app/types/survey.ts. Remaining unions
+ * (SessionStatus, ExportFormat, etc.) are CLOSED SETS: do not extend
+ * without a PRD change. ProcedureType and NoteFieldKey are the exception —
+ * surgeons now define their own surgeries and note sections (see
+ * ProcedureTemplate below), so both widened from closed unions to plain
+ * `string` identifiers, same as sessionId/segmentId/surgeonId already are.
  */
 
 /* ------------------------------------------------------------------ */
@@ -18,10 +22,19 @@
 /* ------------------------------------------------------------------ */
 
 /**
- * Procedure types the prototype supports. PRD §6 starts with ortho
- * (TKA/THA). Closed set — each drives a note template on the server.
+ * A procedure/surgery id. Surgeon-defined (private per-surgeon) — no
+ * longer a closed set. "TKA"/"THA" remain as the seeded defaults every
+ * surgeon starts with, but any string a surgeon creates is valid.
  */
-export type ProcedureType = "TKA" | "THA"
+export type ProcedureType = string
+
+/**
+ * Surgical specialty a procedure belongs to. Unlike ProcedureType, this
+ * IS a closed set — each specialty maps to a real Amazon Transcribe custom
+ * vocabulary provisioned in infra/lib/pipeline-stack.ts, so adding one
+ * means provisioning its vocabulary, not just adding a string.
+ */
+export type Specialty = "ortho" | "endovascular"
 
 export interface ProcedureOption {
   type: ProcedureType
@@ -29,6 +42,59 @@ export interface ProcedureOption {
   label: string
   /** Short subtitle for the picker, e.g. "Right / Left knee replacement". */
   description: string
+  /** Selects which Transcribe custom vocabulary the pipeline uses. */
+  specialty: Specialty
+}
+
+/**
+ * How a default section resolves at review (docs/templates.md §4-5):
+ * the full trio (confirm the default / record fresh dictation / remove it),
+ * or confirm-only for protected events (e.g. counts) that can't be dropped.
+ */
+export type ConfirmPolicy = "confirm_record_remove" | "confirm_only"
+
+/**
+ * One section of a surgeon's note template for a given procedure.
+ * `sectionId` is always machine-generated (never surgeon-typed) since it's
+ * used as a correlation key across the AI tool schema, the AI's response,
+ * and the review screen's field lookups — a duplicate would silently drop
+ * or collide a field on a real note.
+ *
+ * A template holds two kinds of section (docs/templates.md §4), never
+ * interchangeable: a `default_event` pre-fills its own boilerplate and is
+ * confirmed/recorded/removed at review; a `spoken_slot` is never defaulted
+ * and is filled only by dictation. The template "cannot promote a finding
+ * to a default" — this union is how that's enforced in the type system.
+ */
+export interface DefaultEventSection {
+  kind: "default_event"
+  sectionId: string
+  /** Display label, e.g. "Positioning & prep". */
+  label: string
+  /** The surgeon's own standard wording, pre-filled pending confirmation. */
+  defaultText: string
+  confirmPolicy: ConfirmPolicy
+  order: number
+}
+
+export interface SpokenSlotSection {
+  kind: "spoken_slot"
+  sectionId: string
+  /** Display label, e.g. "Implants Used". */
+  label: string
+  /** Optional free-text guidance to the AI on what to listen for/extract. */
+  instructions?: string
+  order: number
+}
+
+export type TemplateSection = DefaultEventSection | SpokenSlotSection
+
+/** A surgeon's full note template for one procedure. */
+export interface ProcedureTemplate {
+  procedureId: string
+  sections: TemplateSection[]
+  /** ISO 8601. */
+  updatedAt: string
 }
 
 /* ------------------------------------------------------------------ */
@@ -37,22 +103,12 @@ export interface ProcedureOption {
 
 /**
  * Every note field is INDEPENDENTLY populated or marked "not stated".
- * `NoteFieldKey` is the closed set of §6 fields.
+ * `NoteFieldKey` matches a template's `TemplateSection.sectionId` — no
+ * longer a closed set, since sections are surgeon-defined. The 14 §6
+ * fields (patientIdentifiers, procedureAndLaterality, ...) remain as the
+ * seeded default template's section ids.
  */
-export type NoteFieldKey =
-  | "patientIdentifiers"
-  | "procedureAndLaterality"
-  | "preoperativeDiagnosis"
-  | "postoperativeDiagnosis"
-  | "surgeons"
-  | "findings"
-  | "implants"
-  | "estimatedBloodLoss"
-  | "specimens"
-  | "complications"
-  | "counts"
-  | "closureTechnique"
-  | "disposition"
+export type NoteFieldKey = string
 
 /**
  * A span of the raw transcript that supports a generated field. Char
@@ -68,21 +124,41 @@ export interface TranscriptSpan {
 }
 
 /**
+ * The trust model (docs/templates.md §6, extends PRD §5.2's evidence gate)
+ * — three provenance states, now template-driven:
+ *   - "spoken" / "not_stated": a spoken_slot field, evidence-gated exactly
+ *     as before. "spoken" also covers a default_event field replaced via
+ *     "No — record" — same trust tier as an intraop finding.
+ *   - "default_unconfirmed" / "default_confirmed" / "default_removed":
+ *     a default_event field's state through the review confirm/record/
+ *     remove flow. "default_unconfirmed" is the hard gate — it blocks
+ *     signing (enforced both client-side and server-side in approve.ts).
+ */
+export type NoteFieldStatus =
+  "spoken" | "not_stated" | "default_unconfirmed" | "default_confirmed" | "default_removed"
+
+/**
  * One field of the operative note. `status` is the evidence gate: the
- * server emits "populated" ONLY when transcript evidence exists, else
- * "not_stated" (PRD §5.2 — no inferred boilerplate).
+ * server emits "spoken" ONLY when transcript evidence exists, else
+ * "not_stated" for spoken_slot fields (PRD §5.2 — no inferred boilerplate);
+ * default_event fields start "default_unconfirmed" and are never
+ * AI-derived.
  */
 export interface NoteField {
   key: NoteFieldKey
   /** Display label, e.g. "Estimated Blood Loss". */
   label: string
-  status: "populated" | "not_stated"
-  /** Model-generated value. Empty string when status is "not_stated". */
+  /** Which template section this field came from — drives review-screen rendering. */
+  kind: "default_event" | "spoken_slot"
+  status: NoteFieldStatus
+  /** Model-generated or template-default value. Empty when "not_stated". */
   value: string
-  /** Transcript spans that produced `value`. Empty when "not_stated". */
+  /** Transcript spans that produced `value`. Empty for unconfirmed/removed defaults. */
   provenance: TranscriptSpan[]
   /** True once a human has edited this field in review. */
   edited: boolean
+  /** Denormalized from the template's DefaultEventSection — kind === "default_event" only. Governs which review actions the surgeon sees. */
+  confirmPolicy?: ConfirmPolicy
 }
 
 /* ------------------------------------------------------------------ */
@@ -194,12 +270,17 @@ export interface GetDraftResponse {
   draft: DraftNote
 }
 
-/** POST /approve — the hard approval gate. Carries the full edit set. */
+/**
+ * POST /approve — the hard approval gate. Carries the full edit set.
+ * `status` is required per field so the server can enforce docs/templates.md
+ * §5's gate — reject if any default_event field is still
+ * "default_unconfirmed" — and so confirmed/removed state persists.
+ */
 export interface ApproveNoteBody {
   sessionId: string
   surgeonId: string
-  /** Final field values as reviewed/edited by the human. */
-  fields: Array<Pick<NoteField, "key" | "value" | "edited">>
+  /** Final field values/state as reviewed/resolved by the human. */
+  fields: Array<Pick<NoteField, "key" | "value" | "edited" | "status">>
   /** Edit-log entries accumulated during review. */
   edits: EditLogEntry[]
 }
@@ -209,4 +290,82 @@ export interface ApproveNoteResponse {
   sessionId: string
   status: "final"
   approvedAt: string
+}
+
+/** GET /procedures — a surgeon's common surgeries. */
+export interface ListProceduresResponse {
+  procedures: ProcedureOption[]
+}
+
+/** POST /procedures — create a custom surgery. */
+export interface CreateProcedureBody {
+  procedureId: string
+  label: string
+  description?: string
+  specialty: Specialty
+}
+export interface CreateProcedureResponse {
+  procedure: ProcedureOption
+}
+
+/** PUT /procedures/{procedureId} */
+export interface UpdateProcedureBody {
+  label?: string
+  description?: string
+  specialty?: Specialty
+}
+export interface UpdateProcedureResponse {
+  procedure: ProcedureOption
+}
+
+/** DELETE /procedures/{procedureId} — cascades to its template. */
+export interface DeleteProcedureResponse {
+  success: boolean
+}
+
+/** GET /templates/{procedureId} */
+export interface GetTemplateResponse {
+  template: ProcedureTemplate
+}
+
+/**
+ * PUT /templates/{procedureId} — replace-all semantics. `order` is omitted;
+ * the server assigns it from array position, same as today.
+ */
+export type PutTemplateSection =
+  Omit<DefaultEventSection, "order"> | Omit<SpokenSlotSection, "order">
+
+export interface PutTemplateBody {
+  sections: PutTemplateSection[]
+}
+export interface PutTemplateResponse {
+  template: ProcedureTemplate
+}
+
+/* ------------------------------------------------------------------ */
+/* Record-at-review (docs/templates.md §5 "No — record")              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * POST /drafts/{sessionId}/fields/{fieldKey}/record — start transcribing a
+ * fresh dictation to replace a default_event field. Returns immediately;
+ * the Transcribe batch job runs async (see startFieldRecord.ts).
+ */
+export interface StartFieldRecordBody {
+  segmentId: string
+  /** S3 key of the uploaded replacement audio. */
+  audioKey: string
+}
+export interface StartFieldRecordResponse {
+  jobName: string
+}
+
+/**
+ * GET /drafts/{sessionId}/fields/{fieldKey}/record?jobName= — poll a
+ * record-in-progress job. `field` is present only once "completed" — the
+ * field has already transitioned to status "spoken" with real provenance.
+ */
+export interface PollFieldRecordResponse {
+  status: "in_progress" | "completed" | "failed"
+  field?: NoteField
 }

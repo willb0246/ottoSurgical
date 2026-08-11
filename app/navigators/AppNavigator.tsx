@@ -11,15 +11,9 @@ import Config from "@/config"
 import { useAuth } from "@/context/AuthContext"
 import { ErrorBoundary } from "@/screens/ErrorScreen/ErrorBoundary"
 import { LoginScreen } from "@/screens/LoginScreen"
-import {
-  ScribeCaptureScreen,
-  ScribeExportScreen,
-  ScribeProcedureSelectScreen,
-  ScribeQueueScreen,
-  ScribeReviewScreen,
-} from "@/screens/scribe"
 import { useAppTheme } from "@/theme/context"
 
+import { MainTabNavigator } from "./MainTabNavigator"
 import type { AppStackParamList, NavigationProps } from "./navigationTypes"
 import { navigationRef, useBackButtonHandler } from "./navigationUtilities"
 
@@ -48,20 +42,12 @@ const AppStack = () => {
           backgroundColor: colors.background,
         },
       }}
-      initialRouteName={isAuthenticated ? "ScribeQueue" : "Login"}
+      initialRouteName={isAuthenticated ? "Main" : "Login"}
     >
       {isAuthenticated ? (
-        <>
-          <Stack.Screen name="ScribeQueue" component={ScribeQueueScreen} />
-          <Stack.Screen name="ScribeProcedureSelect" component={ScribeProcedureSelectScreen} />
-          <Stack.Screen name="ScribeCapture" component={ScribeCaptureScreen} />
-          <Stack.Screen name="ScribeReview" component={ScribeReviewScreen} />
-          <Stack.Screen name="ScribeExport" component={ScribeExportScreen} />
-        </>
+        <Stack.Screen name="Main" component={MainTabNavigator} />
       ) : (
-        <>
-          <Stack.Screen name="Login" component={LoginScreen} />
-        </>
+        <Stack.Screen name="Login" component={LoginScreen} />
       )}
     </Stack.Navigator>
   )

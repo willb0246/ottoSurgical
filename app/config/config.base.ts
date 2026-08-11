@@ -28,7 +28,7 @@ const BaseConfig: ConfigBaseProps = {
    * This is a list of all the route names that will exit the app if the back button
    * is pressed while in that screen. Only affects Android.
    */
-  exitRoutes: ["ScribeQueue"],
+  exitRoutes: ["ScribeQueue", "SurgeryList"],
 
   // Overridden per-environment in config.dev.ts / config.prod.ts once the
   // auth-stack / api-stack CDK outputs exist (see infra/ — Phase 4+).

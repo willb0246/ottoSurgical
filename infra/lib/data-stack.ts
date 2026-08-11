@@ -36,7 +36,10 @@ export class DataStack extends cdk.Stack {
     //   SESSION#<sessionId> / SEGMENT#<segmentId>    -> segment metadata
     //   SESSION#<sessionId> / DRAFT                  -> DraftNote
     //   SESSION#<sessionId> / EDIT#<isoTimestamp>     -> EditLogEntry (append-only)
+    //   SURGEON#<surgeonId> / PROCEDURE#<procedureId> -> surgeon's custom procedure
+    //   SURGEON#<surgeonId> / TEMPLATE#<procedureId>  -> that procedure's ordered note-section template
     // bySurgeon GSI (PK surgeonId, SK startedAt) makes `GET /drafts?surgeonId=` a Query.
+    // Procedure/template reads are plain Get/Query on the base table's PK/SK — no GSI needed.
     this.table = new dynamodb.Table(this, "Table", {
       tableName: `ottosurgical-${props.envName}`,
       partitionKey: { name: "PK", type: dynamodb.AttributeType.STRING },

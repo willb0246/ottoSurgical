@@ -10,24 +10,21 @@ import { useFocusEffect } from "@react-navigation/native"
 import { Button } from "@/components/Button"
 import { Screen } from "@/components/Screen"
 import { Text } from "@/components/Text"
-import type { AppStackScreenProps } from "@/navigators/navigationTypes"
+import type { ScribeStackScreenProps } from "@/navigators/navigationTypes"
 import { useAppTheme } from "@/theme/context"
+import { formatDate } from "@/utils/formatDate"
 import { listSessions, type StoredSession } from "@/utils/scribe/sessionStore"
+import { useHeader } from "@/utils/useHeader"
 
-interface ScribeQueueScreenProps extends AppStackScreenProps<"ScribeQueue"> {}
-
-function segmentSummary(s: StoredSession): string {
-  const n = s.segments.length
-  const secs = Math.round(s.segments.reduce((acc, seg) => acc + seg.durationMs, 0) / 1000)
-  if (n === 0) return "No dictation captured"
-  return `${n} utterance${n === 1 ? "" : "s"} · ${secs}s`
-}
+interface ScribeQueueScreenProps extends ScribeStackScreenProps<"ScribeQueue"> {}
 
 export const ScribeQueueScreen: FC<ScribeQueueScreenProps> = function ScribeQueueScreen({
   navigation,
 }) {
   const { theme } = useAppTheme()
   const [sessions, setSessions] = useState<StoredSession[]>([])
+
+  useHeader({ title: "Operative notes" })
 
   // Refresh the list whenever we return to this screen.
   useFocusEffect(
@@ -39,7 +36,6 @@ export const ScribeQueueScreen: FC<ScribeQueueScreenProps> = function ScribeQueu
   return (
     <Screen preset="fixed" safeAreaEdges={["bottom"]}>
       <ScrollView contentContainerStyle={$content}>
-        <Text preset="heading" text="Operative notes" style={$title} />
         <Text
           preset="default"
           text="Start a case to dictate hands-free with your AirPods. Recordings stay on this device."
@@ -69,14 +65,19 @@ export const ScribeQueueScreen: FC<ScribeQueueScreenProps> = function ScribeQueu
               style={[$row, { borderColor: theme.colors.border }]}
               onPress={() => navigation.navigate("ScribeReview", { sessionId: s.sessionId })}
               accessibilityRole="button"
-              accessibilityLabel={`${s.procedureType} case. ${segmentSummary(s)}.`}
+              accessibilityLabel={`${s.title || s.procedureLabel || s.procedureType} case, ${formatDate(s.startedAt, "MMM d, yyyy 'at' h:mm a")}, ${s.procedureLabel || s.procedureType}.`}
             >
               <View style={$rowMain}>
-                <Text preset="bold" text={s.procedureType} style={$rowTitle} />
+                <Text preset="bold" text={s.title || s.procedureLabel || s.procedureType} style={$rowTitle} />
                 <Text
                   preset="default"
-                  text={segmentSummary(s)}
-                  style={{ color: theme.colors.textDim }}
+                  text={formatDate(s.startedAt, "MMM d, yyyy 'at' h:mm a")}
+                  style={[$rowSubtitle, { color: theme.colors.textDim }]}
+                />
+                <Text
+                  preset="default"
+                  text={s.procedureLabel || s.procedureType}
+                  style={[$rowSubtitle, { color: theme.colors.textDim }]}
                 />
               </View>
               {s.route ? (
@@ -104,7 +105,6 @@ export const ScribeQueueScreen: FC<ScribeQueueScreenProps> = function ScribeQueu
 }
 
 const $content: ViewStyle = { padding: 20, paddingBottom: 40 }
-const $title: TextStyle = { marginBottom: 8 }
 const $subtitle: TextStyle = { marginBottom: 20, fontSize: 16, lineHeight: 22 }
 const $startButton: ViewStyle = { marginBottom: 24 }
 const $row: ViewStyle = {
@@ -119,6 +119,7 @@ const $row: ViewStyle = {
 }
 const $rowMain: ViewStyle = { flex: 1, marginRight: 12 }
 const $rowTitle: TextStyle = { fontSize: 18, marginBottom: 4 }
+const $rowSubtitle: TextStyle = { fontSize: 14, lineHeight: 19 }
 const $chip: ViewStyle = { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999 }
 const $chipText: TextStyle = { fontSize: 13 }
 const $emptyCard: ViewStyle = { borderRadius: 14, borderWidth: 2, padding: 24, marginTop: 4 }

@@ -1,0 +1,30 @@
+# Extending a Note-Generation Pipeline to a New Surgical Specialty Without Touching the Pipeline
+
+**Added a second surgical specialty to an AI documentation product by adding data, not by rewriting the generation code — and along the way, solved a real gap in AWS's own infrastructure-as-code support for a HIPAA-relevant service.**
+
+## Context
+
+A pre-seed, founder-led digital-health venture whose AI-assisted intraoperative documentation product launched single-specialty (orthopedic procedures) and needed to extend to a second specialty — endovascular procedures — with its own implant catalog, anatomy, and terminology, without destabilizing the notes already working for the first.
+
+## The Problem
+
+The prototype's note generation was correct but implicit: the required note fields for a procedure and the Transcribe custom vocabulary tuned for its terminology were both effectively hardcoded, built for exactly two orthopedic procedure types. The naive way to add a second specialty is to branch the generation code per specialty — a pattern that gets linearly worse with every specialty added, and that carries real regression risk to every surgeon whose notes were already working correctly. Compounding the difficulty, Amazon Transcribe custom vocabularies — the mechanism for teaching the ASR system implant IDs and drug names it would otherwise mishear — have no native CloudFormation resource type at all, so provisioning them through infrastructure-as-code meant working outside the paved path AWS provides for almost everything else.
+
+## Why It Needed a Physician-Engineer
+
+The fix required recognizing that "the note's required sections" and "the vocabulary the transcription engine needs" are clinically distinct concerns that happen to look like the same problem in code. A procedure's note structure — findings, implants, estimated blood loss, closure — is largely stable across specialties; what changes sharply between an orthopedic and an endovascular case is the vocabulary underneath it — the specific implant identifiers, anatomy, and drug names the transcription engine has to get right, which is exactly the category of failure the product's evidence-gated generation exists to protect against. Separating those two axes in the architecture, instead of collapsing them into one bigger per-specialty branch, required clinical categorization judgment as much as software design — a purely technical read of the problem tends to bundle "template" and "vocabulary" together because they arrive from the same procedure record.
+
+## Approach
+
+The note-section schema moved out of hardcoded application code and into per-surgeon, per-procedure data rows, with an explicit, deliberate fallback to the original default field set — a constraint imposed specifically so every existing case stays byte-for-byte unchanged unless a surgeon actively customizes something, rather than treating that as an acceptable side effect of the migration. A small CRUD surface (create, list, update, delete procedures; get and put templates) and a surgeon-facing template editor were built on top, so adding a specialty or adjusting a procedure's fields became a data operation, not a code change or a deployment. Transcribe vocabulary selection was kept as a fully separate axis — resolved per case from the surgeon's own procedure record via a specialty-to-vocabulary lookup — so the note schema and the transcription vocabulary can evolve independently instead of being coupled to the same per-specialty branch.
+
+## Technical Detail
+
+Because Transcribe custom vocabularies have no CloudFormation resource type, vocabulary lifecycle is driven through a custom resource that calls the Transcribe SDK's create/update/delete APIs directly inside the CDK deploy. Getting Transcribe actual read access to the vocabulary file required working through two dead ends before finding the documented pattern: CDK's standard asset-bucket grant silently no-ops against the shared bootstrap bucket for a bare service-principal grantee, and even a bucket-policy grant on a stack-owned bucket was rejected outright by the service. The pattern that actually works — the same one Amazon's own HealthScribe service requires — is a dedicated IAM role that Transcribe assumes via `DataAccessRoleArn`, which in turn required granting the custom resource's own execution role explicit `iam:PassRole` permission and sequencing construct dependencies so the vocabulary file is deployed and the role's read grant is active before vocabulary creation ever fires. A related, separately-discovered gap: same-account S3 access needs no bucket policy at all, but the audio bucket's customer-managed KMS key still default-denies the Transcribe service principal unless decrypt access is explicitly granted on the key's own resource policy — same-account trust does not extend automatically to a service principal on a CMK. Each specialty now has its own Transcribe custom vocabulary, defined as a TAB-delimited table-format file (phrase / sounds-like / IPA / display-as) referenced via `VocabularyFileUri`, deliberately avoiding AWS's now-deprecated inline-phrase-list format.
+
+## Outcome
+
+Adding the second specialty required a vocabulary file and one entry in a lookup table — zero changes to the note-generation Lambda, the provenance-verification Lambda, or the Step Functions workflow definition itself. Every existing surgeon's note generation is provably unaffected, since the schema resolution path falls back to the exact default field set that was previously hardcoded. **Flagged gap:** the extension is implemented and verified through type-checking and linting, but has not yet been exercised end-to-end against a real endovascular case recording — that live validation is the next step before the second specialty is considered proven, not just built.
+
+---
+**Skills demonstrated:** AWS serverless architecture (CDK, Lambda, Step Functions, DynamoDB) · Deep AWS IAM/KMS debugging · Extensible, schema-driven system design · 0→1 execution
